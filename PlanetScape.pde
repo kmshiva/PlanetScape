@@ -1,9 +1,19 @@
+import java.util.*;
+import controlP5.*;
+
+ControlP5 controlP5;
 
 GravitySimulation sim;
 Star sun;
 Planet planet;
 Planet planet2;
 ArrayList orbitPositions;
+
+controlP5.Button btnRewind;
+controlP5.Button btnPlayPause;
+controlP5.Button btnFastForward;
+
+boolean paused;
 
 void setup()
 {
@@ -23,6 +33,17 @@ void setup()
   sim.add(sun);
   sim.add(planet);
   sim.add(planet2);
+  
+  controlP5 = new ControlP5(this);
+  
+  btnRewind = controlP5.addButton("btnRewind_OnClick", 0, 800, 20, 50, 20);
+  btnRewind.setLabel("Rewind");
+  
+  btnPlayPause = controlP5.addButton("btnPlayPause_OnClick", 0, 860, 20, 50, 20);
+  btnPlayPause.setLabel("Pause");
+  
+  btnFastForward = controlP5.addButton("btnFastForward_OnClick", 0, 920, 20, 80, 20);
+  btnFastForward.setLabel("Fast Forward");
 }
 
 void draw()
@@ -30,8 +51,11 @@ void draw()
   background(0);
 //  stroke(255);
 //  fill(255);
-  sim.update();
+
+  if (! paused)
+    sim.update();
   
+  fill(255);
   sun.display();
   planet.display();
   planet2.display();
@@ -46,6 +70,43 @@ void draw()
 //  fill(255);
   
 //  println(orbitPositions.size());
+
+  println(orbitPositions.size());
+}
+
+public void btnPlayPause_OnClick(int theValue)
+{
+  paused = !paused;
+  
+  if (paused)
+    btnPlayPause.setLabel("Play");
+  else
+    btnPlayPause.setLabel("Pause");
+    
+}
+
+public void btnFastForward_OnClick(int theValue)
+{
+  for (int i = 0; i < 1; i++)
+  {
+    sim.update();
+  }
+}
+
+public void btnRewind_OnClick(int theValue)
+{
+  int previousFrame = frameCount - 1;
+  Hashtable htObjs = (Hashtable)orbitPositions.get(previousFrame);
+  Enumeration e = htObjs.keys();
+ 
+  //iterate through Hashtable keys Enumeration
+  while(e.hasMoreElements())
+  {
+    CelestialObject obj = (CelestialObject)e.nextElement();
+    PVector prevPos = (PVector)htObjs.get(obj);
+    
+    obj.setPosition(prevPos);
+  }
 }
 
 abstract class CelestialObject
@@ -69,6 +130,11 @@ abstract class CelestialObject
     this.acceleration = acceleration;
     velocity.add(acceleration);
     position.add(velocity);
+  }
+  
+  public void setPosition(PVector position)
+  {
+    this.position = position;
   }
   
   public int getMass()
@@ -143,6 +209,7 @@ class GravitySimulation
   
   void update()
   {
+    Hashtable htObjs = new Hashtable();
     for (int i = 0; i < objects.size(); i++)
     {
       CelestialObject obj1 = (CelestialObject)objects.get(i);
@@ -174,9 +241,12 @@ class GravitySimulation
         
 //        println("POS: x:" + obj1.getPosition().x + " y:" + obj1.getPosition().y);
 //        println();
-        
-        //        orbitPositions.add(obj1.getPosition());
+//        orbitPositions.add(obj1.getPosition());
+
+      htObjs.put(obj1, obj1.getPosition());
     }
+    
+    orbitPositions.add(htObjs);
   }
 }
 
