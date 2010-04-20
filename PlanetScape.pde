@@ -19,125 +19,79 @@ int intSimCtr;
 
 void setup()
 {
-    size(1000, 1000);
-    background(0);
-    frameRate(30);
-    intSimCtr = 0;
-    smooth();
+  size(1000, 1000);
+  background(0);
+  frameRate(30);
+  intSimCtr = 0;
+  smooth();
 
-    orbitPositions = new ArrayList();
+  timeline = new Timeline();
 
-    timeline = new Timeline();
+  sim = new GravitySimulation();
 
-    sim = new GravitySimulation();
+  sun = new Star(800, 25, new PVector(500, 500), new PVector(0, 0), 0);
+  planet = new Planet(10, 10, new PVector(700, 500), new PVector(0, -20));
+  planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -10));
+  
+  timeline.registerStatefulObject(sun);
+  timeline.registerStatefulObject(planet);
+  timeline.registerStatefulObject(planet2);
 
-    sun = new Star(800, 25, new PVector(500, 500), new PVector(0, 0), 0);
-    planet = new Planet(10, 10, new PVector(700, 500), new PVector(0, -20));
-    planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -10));
-    
-    timeline.registerStatefulObject(sun);
-    timeline.registerStatefulObject(planet);
-    timeline.registerStatefulObject(planet2);
+  controlP5 = new ControlP5(this);
 
-    controlP5 = new ControlP5(this);
+  btnRewind = controlP5.addButton("btnRewind_OnClick", 0, 800, 20, 50, 20);
+  btnRewind.setLabel("Rewind");
 
-    btnRewind = controlP5.addButton("btnRewind_OnClick", 0, 800, 20, 50, 20);
-    btnRewind.setLabel("Rewind");
+  btnPlayPause = controlP5.addButton("btnPlayPause_OnClick", 0, 860, 20, 50, 20);
+  btnPlayPause.setLabel("Pause");
 
-    btnPlayPause = controlP5.addButton("btnPlayPause_OnClick", 0, 860, 20, 50, 20);
-    btnPlayPause.setLabel("Pause");
-
-    btnFastForward = controlP5.addButton("btnFastForward_OnClick", 0, 920, 20, 80, 20);
-    btnFastForward.setLabel("Fast Forward");
+  btnFastForward = controlP5.addButton("btnFastForward_OnClick", 0, 920, 20, 80, 20);
+  btnFastForward.setLabel("Fast Forward");
 }
 
 void draw()
 {
-    background(0);
-    fill(255);
+  background(0);
+  fill(255);
 
-    if (!paused)
-      timeline.moveForward();
-    
-    
-//    sun.display();
-//    planet.display();
-//    planet2.display();
-    
-    ArrayList objects = timeline.getStatefulObjects();
-    for (int i = 0; i < objects.size(); i++)
-    {
-      ((CelestialObject)objects.get(i)).display();
-    }
+  if (!paused)
+    timeline.moveForward();
+  
+  ArrayList objects = timeline.getStatefulObjects();
+  for (int i = 0; i < objects.size(); i++)
+  {
+    ((CelestialObject)objects.get(i)).display();
+  }
 }
 
 public void btnPlayPause_OnClick(int theValue)
 {
-    paused = !paused;
+  paused = !paused;
 
-    if (paused)
-      btnPlayPause.setLabel("Play");
-    else
-      btnPlayPause.setLabel("Pause");
+  if (paused)
+    btnPlayPause.setLabel("Play");
+  else
+    btnPlayPause.setLabel("Pause");
 
 }
 
 public void btnFastForward_OnClick(int theValue)
 {
-//    for (int i = 0; i < 1; i++)
-//    {
-////      sim.update();
-//    }
   timeline.moveForward();
 }
 
 public void btnRewind_OnClick(int theValue)
 {
   timeline.moveBackward();
-//    int previousFrame = intSimCtr - 10;
-//    if (previousFrame >= 0)
-//    {
-//      println(previousFrame + " " + orbitPositions.size());
-//      ArrayList alObjs = (ArrayList)orbitPositions.get(previousFrame);
-//      ArrayList currentObjs = null;//sim.getObjects();
-//
-//      println(alObjs.size() + " " + currentObjs.size());
-//
-//      for (int i = 0; i < alObjs.size(); i++)
-//      {
-//        CelestialObject prevObj = (CelestialObject)alObjs.get(i);
-//        CelestialObject currentObj = (CelestialObject)currentObjs.get(i);
-//        println("current: " + currentObj.getPosition().x + "," + currentObj.getPosition().y);
-//        println("previou: " + prevObj.getPosition().x + "," + prevObj.getPosition().y);
-//        currentObjs.set(i, prevObj);
-//        //      currentObj = prevObj;
-//        currentObj = (CelestialObject)currentObjs.get(i);
-//        println("current: " + currentObj.getPosition().x + "," + currentObj.getPosition().y);
-//        println();
-//      }
-//
-//      intSimCtr -= 10;
-////      sim.update();
-//    }
 }
 
-class TimelineOutOfBoundsException extends Exception 
-{
-    TimelineOutOfBoundsException()
-    {
-    }
-    
-    TimelineOutOfBoundsException(String msg) 
-    {
-        super(msg);
-    }
-}
-
+// This class maintains the timeline in which the whole system exists, i.e. it keeps track of the state of the system at each point in
+// time, thus allowing the user to go forward and backward in time
 class Timeline
 {
-  int intTimeIdx;
-  ArrayList alObjectStateArchive;
-  ArrayList alStatefulObjects;
+  int intTimeIdx;  // the current point in time
+  ArrayList alObjectStateArchive;  // the state of the system at all previous points in time
+  ArrayList alStatefulObjects;  // the current state of the system 
   
   public Timeline()
   {
@@ -160,11 +114,13 @@ class Timeline
   {
     intTimeIdx++;
     
-    if (alObjectStateArchive.size() > intTimeIdx)
+    // if the future values have already been calculated, just fetch them instead of calculating them again
+    if (alObjectStateArchive.size() > intTimeIdx) 
       setCurrentState(cloneArrayList((ArrayList)alObjectStateArchive.get(intTimeIdx)));
     else
     {
-      sim.update(alStatefulObjects);
+      println("calculating...");
+      sim.calculateForces(alStatefulObjects);
       alObjectStateArchive.add(cloneArrayList(alStatefulObjects));
     }
     
@@ -181,9 +137,9 @@ class Timeline
     }
     else
     {
-      println("before:" + ((CelestialObject)alStatefulObjects.get(0)).getPosition().x + "," + ((CelestialObject)alStatefulObjects.get(0)).getPosition().y);
+//      println("before:" + ((CelestialObject)alStatefulObjects.get(0)).getPosition().x + "," + ((CelestialObject)alStatefulObjects.get(0)).getPosition().y);
       setCurrentState(cloneArrayList((ArrayList)alObjectStateArchive.get(intTimeIdx)));
-      println("before:" + ((CelestialObject)alStatefulObjects.get(0)).getPosition().x + "," + ((CelestialObject)alStatefulObjects.get(0)).getPosition().y);
+//      println("before:" + ((CelestialObject)alStatefulObjects.get(0)).getPosition().x + "," + ((CelestialObject)alStatefulObjects.get(0)).getPosition().y);
     }
       
     return intTimeIdx;
@@ -197,6 +153,7 @@ class Timeline
     }
   }
   
+  // Does a deepcopy of an array list
   private ArrayList cloneArrayList(ArrayList al)
   {
     ArrayList alNew = new ArrayList(al.size());
@@ -211,193 +168,171 @@ class Timeline
 
 abstract class CelestialObject implements Cloneable
 {
-    int mass;
-    int radius;
-    PVector position;
-    PVector velocity;
-    PVector acceleration;
+  int mass;
+  int radius;
+  PVector position;
+  PVector velocity;
+  PVector acceleration;
 
-    public CelestialObject(int mass, int radius, PVector position, PVector initialVelocity)
+  public CelestialObject(int mass, int radius, PVector position, PVector initialVelocity)
+  {
+    this.mass = mass;
+    this.radius = radius;
+    this.position = position;
+    this.velocity = initialVelocity;
+  }
+
+  public CelestialObject(CelestialObject other)
+  {
+    this(other.mass, other.radius, 
+    new PVector(other.position.x, other.position.y), 
+    new PVector(other.velocity.x, other.velocity.y));
+  }
+
+  public void setAcceleration(PVector acceleration)
+  {
+    this.acceleration = acceleration;
+    velocity.add(acceleration);
+    position.add(velocity);
+  }
+
+  public void setPosition(PVector position)
+  {
+    this.position = position;
+  }
+
+  public int getMass()
+  {
+    return this.mass;
+  }
+
+  public PVector getPosition()
+  {
+    return this.position;
+  }
+
+  public PVector getAcceleration()
+  {
+    return this.acceleration;
+  }
+
+  public void update()
+  {
+
+  }
+
+  public abstract void display();
+
+  public CelestialObject clone()
+  {
+    try 
     {
-      this.mass = mass;
-      this.radius = radius;
-      this.position = position;
-      this.velocity = initialVelocity;
-    }
+    CelestialObject obj = (CelestialObject) super.clone();
 
-    public CelestialObject(CelestialObject other)
+    obj.position = new PVector(obj.position.x, obj.position.y);
+    obj.velocity = new PVector(obj.velocity.x, obj.velocity.y);
+    obj.acceleration = new PVector(obj.acceleration.x, obj.acceleration.y);
+
+    return obj;
+    }
+    catch (final CloneNotSupportedException ex) 
     {
-      this(other.mass, other.radius, 
-      new PVector(other.position.x, other.position.y), 
-      new PVector(other.velocity.x, other.velocity.y));
+    throw new AssertionError();
     }
-
-    public void setAcceleration(PVector acceleration)
-    {
-      this.acceleration = acceleration;
-      velocity.add(acceleration);
-      position.add(velocity);
-    }
-
-    public void setPosition(PVector position)
-    {
-      this.position = position;
-    }
-
-    public int getMass()
-    {
-      return this.mass;
-    }
-
-    public PVector getPosition()
-    {
-      return this.position;
-    }
-
-    public PVector getAcceleration()
-    {
-      return this.acceleration;
-    }
-
-    public void update()
-    {
-
-    }
-
-    public abstract void display();
-
-    public CelestialObject clone()
-    {
-      try 
-      {
-        CelestialObject obj = (CelestialObject) super.clone();
-
-        obj.position = new PVector(obj.position.x, obj.position.y);
-        obj.velocity = new PVector(obj.velocity.x, obj.velocity.y);
-        obj.acceleration = new PVector(obj.acceleration.x, obj.acceleration.y);
-
-        return obj;
-      }
-      catch (final CloneNotSupportedException ex) 
-      {
-        throw new AssertionError();
-      }
-    }
+  }
 }
 
 class Star extends CelestialObject implements Cloneable
 {
-    int heat;
+  int heat;
 
-    public Star(int mass, int radius, PVector position, PVector initialVelocity, int heat)
-    {
-      super(mass, radius, position, initialVelocity);
-      this.heat = heat;
-    }
+  public Star(int mass, int radius, PVector position, PVector initialVelocity, int heat)
+  {
+    super(mass, radius, position, initialVelocity);
+    this.heat = heat;
+  }
 
-    public Star(Star other)
-    {
-      super(other);
-      this.heat = other.heat; 
-    }
+  public Star(Star other)
+  {
+    super(other);
+    this.heat = other.heat; 
+  }
 
-    public void display()
-    {
-      ellipse(position.x, position.y, radius*2, radius*2);
-    }
+  public void display()
+  {
+    ellipse(position.x, position.y, radius*2, radius*2);
+  }
 
-    public Star clone()
-    {
-      Star obj = (Star) super.clone();
-      return obj;
-    }
+  public Star clone()
+  {
+    Star obj = (Star) super.clone();
+    return obj;
+  }
 }
 
 class Planet extends CelestialObject implements Cloneable
 {
-    int density = 10;
+  int density = 10;
 
-    public Planet(int mass, int radius, PVector position, PVector initialVelocity)
-    {
-      super(mass, radius, position, initialVelocity);
-    }
+  public Planet(int mass, int radius, PVector position, PVector initialVelocity)
+  {
+    super(mass, radius, position, initialVelocity);
+  }
 
-    public void display()
-    {
-      ellipse(position.x, position.y, radius*2, radius*2);
-    }
+  public void display()
+  {
+    ellipse(position.x, position.y, radius*2, radius*2);
+  }
 
-    public Planet clone()
-    {
-      Planet obj = (Planet) super.clone();
-      return obj;
-    }
+  public Planet clone()
+  {
+    Planet obj = (Planet) super.clone();
+    return obj;
+  }
 }
 
 class GravitySimulation
 {
-    //  double G = 6.67482e-11;
-    float G = 6.67482e1;  
-//    ArrayList objects;
+  //  double G = 6.67482e-11;
+  float G = 6.67482e1;  
 
-    public GravitySimulation()
+  public GravitySimulation()
+  {
+    
+  }
+
+  void calculateForces(ArrayList objects)
+  {
+    intSimCtr += 1;
+
+    for (int i = 0; i < objects.size(); i++)
     {
-//      this.objects = new ArrayList();
+    CelestialObject obj1 = (CelestialObject)objects.get(i);
+    float forceX = 0;
+    float forceY = 0;
+
+    for (int j = 0; j < objects.size(); j++)
+    {  
+      CelestialObject obj2 = (CelestialObject)objects.get(j);
+
+      if (i == j)
+      continue;
+
+      PVector pvDistance = PVector.sub(obj2.getPosition(), obj1.getPosition());
+      //    println("distance: x:" + pvDistance.x + " y:" + pvDistance.y);
+      float distance = sqrt(sq(pvDistance.y) + sq(pvDistance.x));
+      float angle = degrees(atan2(pvDistance.y, pvDistance.x));
+
+      float force = (G * obj1.getMass() * obj2.getMass())/sq(distance);
+      forceX += force * cos(radians(angle));
+      forceY += force * sin(radians(angle));
     }
 
-//    void add(CelestialObject obj)
-//    {
-//      this.objects.add(obj);
-//    }
-//
-//    ArrayList getObjects()
-//    {
-//      return this.objects;
-//    }
+    PVector newAccel = new PVector(forceX/obj1.getMass(), forceY/obj1.getMass());
 
-    void update(ArrayList objects)
-    {
-      intSimCtr += 1;
-      ArrayList alObjs = new ArrayList();
-
-      for (int i = 0; i < objects.size(); i++)
-      {
-        CelestialObject obj1 = (CelestialObject)objects.get(i);
-        float forceX = 0;
-        float forceY = 0;
-
-        for (int j = 0; j < objects.size(); j++)
-        {  
-          CelestialObject obj2 = (CelestialObject)objects.get(j);
-
-          if (i == j)
-            continue;
-
-          PVector pvDistance = PVector.sub(obj2.getPosition(), obj1.getPosition());
-          //        println("distance: x:" + pvDistance.x + " y:" + pvDistance.y);
-          float distance = sqrt(sq(pvDistance.y) + sq(pvDistance.x));
-          float angle = degrees(atan2(pvDistance.y, pvDistance.x));
-
-          float force = (G * obj1.getMass() * obj2.getMass())/sq(distance);
-          forceX += force * cos(radians(angle));
-          forceY += force * sin(radians(angle));
-        }
-
-        //        println(distance + " " + angle + " " + force + " " + forceX + " " + forceY);
-
-        PVector newAccel = new PVector(forceX/obj1.getMass(), forceY/obj1.getMass());
-
-        obj1.setAcceleration(newAccel);
-
-        //        println("POS: x:" + obj1.getPosition().x + " y:" + obj1.getPosition().y);
-        //        println();
-        //        orbitPositions.add(obj1.getPosition());
-
-        alObjs.add(obj1.clone());
-      }
-
-      orbitPositions.add(alObjs);
+    obj1.setAcceleration(newAccel);
     }
+  }
 }
 
 
