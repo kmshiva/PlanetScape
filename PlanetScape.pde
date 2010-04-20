@@ -12,6 +12,7 @@ Planet planet2;
 controlP5.Button btnRewind;
 controlP5.Button btnPlayPause;
 controlP5.Button btnFastForward;
+controlP5.Slider sliderTimeline;
 
 boolean paused;
 
@@ -29,13 +30,13 @@ void setup()
 
   sim = new GravitySimulation();
 
-  sun = new Star(800, 25, new PVector(500, 500), new PVector(0, 0), 0);
-  planet = new Planet(10, 10, new PVector(700, 500), new PVector(0, -20));
-  planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -10));
+  sun = new Star(1800, 25, new PVector(500, 500), new PVector(0, 0), 0);
+  planet = new Planet(10, 10, new PVector(700, 500), new PVector(0, -25));
+//  planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -10));
   
   timeline.registerStatefulObject(sun);
   timeline.registerStatefulObject(planet);
-  timeline.registerStatefulObject(planet2);
+//  timeline.registerStatefulObject(planet2);
 
   controlP5 = new ControlP5(this);
 
@@ -47,6 +48,9 @@ void setup()
 
   btnFastForward = controlP5.addButton("btnFastForward_OnClick", 0, 920, 20, 80, 20);
   btnFastForward.setLabel("Fast Forward");
+  
+  sliderTimeline = controlP5.addSlider("sliderTimeline_OnClick", 0, 10000, 0, 20, 900, 900, 10);
+  sliderTimeline.setLabel("Timeline");
 }
 
 void draw()
@@ -64,6 +68,7 @@ void draw()
   }
 }
 
+// Event Handlers
 public void btnPlayPause_OnClick(int theValue)
 {
   paused = !paused;
@@ -85,6 +90,12 @@ public void btnRewind_OnClick(int theValue)
   timeline.moveBackward();
 }
 
+public void sliderTimeline_OnClick(int theValue)
+{
+  timeline.move(theValue - timeline.getTimeIdx());
+}
+
+
 // This class maintains the timeline in which the whole system exists, i.e. it keeps track of the state of the system at each point in
 // time, thus allowing the user to go forward and backward in time
 class Timeline
@@ -105,6 +116,11 @@ class Timeline
     return cloneArrayList((ArrayList)this.alStatefulObjects);
   }
   
+  public int getTimeIdx()
+  {
+    return intTimeIdx;
+  }
+  
   public void registerStatefulObject(CelestialObject obj)
   {
     alStatefulObjects.add(obj);
@@ -119,12 +135,28 @@ class Timeline
       setCurrentState(cloneArrayList((ArrayList)alObjectStateArchive.get(intTimeIdx)));
     else
     {
-      println("calculating...");
+//      println("calculating...");
       sim.calculateForces(alStatefulObjects);
       alObjectStateArchive.add(cloneArrayList(alStatefulObjects));
     }
     
+    sliderTimeline.setValue(intTimeIdx);
+    
     return intTimeIdx;
+  }
+  
+  public void move(int steps)
+  {
+    if (steps > 0)
+    {
+      for (int i = 0; i < steps; i++)
+        moveForward();
+    }
+    else
+    {
+       for (int i = 0; i < abs(steps); i++)
+        moveBackward();
+    }
   }
   
   public int moveBackward()
@@ -141,7 +173,9 @@ class Timeline
       setCurrentState(cloneArrayList((ArrayList)alObjectStateArchive.get(intTimeIdx)));
 //      println("before:" + ((CelestialObject)alStatefulObjects.get(0)).getPosition().x + "," + ((CelestialObject)alStatefulObjects.get(0)).getPosition().y);
     }
-      
+    
+    sliderTimeline.setValue(intTimeIdx);
+    
     return intTimeIdx;
   }
   
