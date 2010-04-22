@@ -14,31 +14,28 @@ controlP5.Button btnPlayPause;
 controlP5.Button btnFastForward;
 controlP5.Slider sliderTimeline;
 
-ArrayList celestialObjectViews;
-
 boolean paused;
 boolean dragging;
 
-int intSimCtr;
+boolean drawVectors;
 
 void setup()
 {
-  size(1000, 700);
+  size(1024, 768);
   background(0);
   frameRate(30);
-  intSimCtr = 0;
   smooth();
   
-  paused = true;
+  drawVectors = false;
   
-  celestialObjectViews = new ArrayList();
+  paused = true;
 
   timeline = new Timeline();
 
   sim = new GravitySimulation();
 
   sun = new Star(5000, 25, new PVector(300, 500), new PVector(0, 0), 0, "sun");
-  planet = new Planet(10, 10, new PVector(500, 500), new PVector(0, -40), "planet");
+  planet = new Planet(10, 10, new PVector(500, 500), new PVector(0, 40), "planet");
   planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -40), "planet2");
   
   timeline.registerStatefulObject(sun);
@@ -51,28 +48,65 @@ void setup()
   btnRewind.setLabel("Rewind");
 
   btnPlayPause = controlP5.addButton("btnPlayPause_OnClick", 0, 860, 20, 50, 20);
-  btnPlayPause.setLabel("Pause");
+  btnPlayPause.setLabel("Play");
 
   btnFastForward = controlP5.addButton("btnFastForward_OnClick", 0, 920, 20, 80, 20);
   btnFastForward.setLabel("Fast Forward");
   
-  sliderTimeline = controlP5.addSlider("sliderTimeline_OnClick", 0, 10000, 0, 20, 650, 900, 10);
+  sliderTimeline = controlP5.addSlider("sliderTimeline_OnClick", 0, 10000, 0, 20, 720, 900, 10);
   sliderTimeline.setLabel("Timeline");
 }
 
 void draw()
 {
-  background(120);
+  background(0);
   fill(255);
-
+  
   if (!paused)
     timeline.moveForward();
+  
+  if (dragging)
+    drawOrbits(timeline.getFutureObjectStates());
+  else
+    drawOrbits(timeline.getPastObjectStates());
   
   ArrayList objects = timeline.getStatefulObjects();
   for (int i = 0; i < objects.size(); i++)
   {
     CelestialObject obj = (CelestialObject)objects.get(i);
     obj.display();
+  }
+}
+
+public void drawOrbits(ArrayList alObjectsArchive)
+{
+//  println("SIZE:" + alObjectsArchive.size());
+//  ArrayList alObjectsArchive = timeline.getObjectStateArchive();
+  ArrayList alPrevPos = new ArrayList();
+  ArrayList alColors = new ArrayList();
+  alColors.add(color(255, 0, 0));
+  alColors.add(color(255, 255, 0));
+  alColors.add(color(255, 0, 255));
+//  for (int i = timeline.getTimeIdx(); i >= 0 && i > (timeline.getTimeIdx() - 1 - 100); i--)
+  for (int i = 0; i < alObjectsArchive.size(); i++)
+  {
+    ArrayList objects = (ArrayList)alObjectsArchive.get(i);
+    for (int j = 0; j < objects.size(); j++)
+    {
+      CelestialObject obj = (CelestialObject)objects.get(j);
+//      CelestialObject obj = (CelestialObject)objects.get(1);
+      PVector pos = obj.getPosition();
+//      stroke(0, 0, 255);
+      stroke((Integer)alColors.get(j));
+      if (alPrevPos.size() == objects.size())
+      {
+        PVector prevPos = (PVector)alPrevPos.get(j);
+        line(prevPos.x, prevPos.y, pos.x, pos.y);
+        alPrevPos.set(j, pos);
+      }
+      else
+        alPrevPos.add(pos);
+    }
   }
 }
 
@@ -169,6 +203,37 @@ class Timeline
     return this.alStatefulObjects;
   }
   
+  public ArrayList getObjectStateArchive()
+  {
+    return this.alObjectStateArchive;
+  }
+  
+  public ArrayList getPastObjectStates()
+  {
+    ArrayList alPast = new ArrayList();
+    for (int i = intTimeIdx; i > 0 && i > intTimeIdx - 100; i--)
+    {
+      alPast.add(this.alObjectStateArchive.get(i));
+    }
+    
+    return alPast;
+  }
+  
+  public ArrayList getFutureObjectStates()
+  {
+    ArrayList alFutureArchive = new ArrayList();
+    ArrayList alFutureObjects = cloneArrayList(alStatefulObjects);
+    
+    for (int i = 0; i < 100; i++)
+    {
+      sim.calculateForces(alFutureObjects);
+    
+      alFutureArchive.add(cloneArrayList(alFutureObjects));
+    }
+    
+    return alFutureArchive;
+  }
+  
   public int getTimeIdx()
   {
     return intTimeIdx;
@@ -248,7 +313,7 @@ class Timeline
   }
   
   // Does a deepcopy of an array list
-  private ArrayList cloneArrayList(ArrayList al)
+  public ArrayList cloneArrayList(ArrayList al)
   {
     ArrayList alNew = new ArrayList(al.size());
     for (int i = 0; i < al.size(); i++)
@@ -299,6 +364,11 @@ abstract class CelestialObject implements Cloneable
     this.alForces.add(pv);
   }
   
+  public ArrayList getForces()
+  {
+    return this.alForces;
+  }
+  
   public String getName()
   {
     return strName;
@@ -330,6 +400,11 @@ abstract class CelestialObject implements Cloneable
   {
     return this.radius;
   }
+  
+  public PVector getVelocity()
+  {
+    return this.velocity;
+  }
 
   public PVector getAcceleration()
   {
@@ -358,6 +433,62 @@ abstract class CelestialObject implements Cloneable
   }
 
   public abstract void display();
+  
+  private float scaleValue(float val)
+  {
+    float x = 5 + val/100;
+    if (x > 30)
+      x = 30;
+    
+    return x;
+  }
+  
+  private PVector getForceLengths(PVector force)
+  {
+
+    float vectorLengthX = 0;
+    float vectorLengthY = 0;
+    
+    float ratio = force.y/force.x;
+    
+    if (abs(force.x) > abs(force.y))
+    {
+      vectorLengthX = scaleValue(abs(force.x))*(abs(force.x)/force.x);
+      vectorLengthY = vectorLengthX * ratio;
+    }
+    else
+    {
+      vectorLengthY = scaleValue(abs(force.y))*(abs(force.y)/force.y);
+      vectorLengthX = vectorLengthY / ratio;
+    }
+    
+    return new PVector(vectorLengthX, vectorLengthY);
+  }
+  
+  public void drawForceVectors()
+  {
+    // draw force vectors
+      float totalForceX = 0;
+      float totalForceY = 0;
+      
+      for (int i = 0; i < this.alForces.size(); i++)
+      {
+        PVector f = (PVector)this.alForces.get(i);
+        stroke(255, 0, 0);
+        
+//        println(strName + " " + f.x + "," + f.y);
+        
+        PVector vectorLengths = getForceLengths(new PVector(f.x, f.y));
+        
+        line(this.position.x, this.position.y, this.position.x + vectorLengths.x, this.position.y + vectorLengths.y);
+        totalForceX += f.x;
+        totalForceY += f.y;
+      }
+      
+      stroke(0, 255, 0);
+      PVector vectorLengths = getForceLengths(new PVector(totalForceX, totalForceY));
+      line(this.position.x, this.position.y, this.position.x + vectorLengths.x, this.position.y + vectorLengths.y);
+  }
 
   public CelestialObject clone()
   {
@@ -368,6 +499,7 @@ abstract class CelestialObject implements Cloneable
       obj.position = new PVector(obj.position.x, obj.position.y);
       obj.velocity = new PVector(obj.velocity.x, obj.velocity.y);
       obj.acceleration = new PVector(obj.acceleration.x, obj.acceleration.y);
+      obj.alForces = cloneArrayList(obj.alForces);
   
       return obj;
     }
@@ -375,6 +507,19 @@ abstract class CelestialObject implements Cloneable
     {
       throw new AssertionError();
     }
+  }
+  
+  // Does a deepcopy of an array list
+  public ArrayList cloneArrayList(ArrayList al)
+  {
+    ArrayList alNew = new ArrayList(al.size());
+    for (int i = 0; i < al.size(); i++)
+    {
+      PVector pv = (PVector)al.get(i);
+      alNew.add(new PVector(pv.x, pv.y));
+    }
+    
+    return alNew;
   }
 }
 
@@ -399,6 +544,8 @@ class Star extends CelestialObject implements Cloneable
   {
     pushMatrix();
     
+    noStroke();
+    
     if (paused && isMouseOver())
       fill(127);
     else
@@ -409,21 +556,15 @@ class Star extends CelestialObject implements Cloneable
     if (paused)
     {
       fill(255, 0, 0);
+      noStroke();
       float handleRadius = radius/10;
       if (handleRadius < 2)
         handleRadius = 2;
         
       ellipse(position.x, position.y, handleRadius*2, handleRadius*2);
-    }
     
-    for (int i = 0; i < this.alForces.size(); i++)
-    {
-      PVector f = (PVector)this.alForces.get(i);
-      println(f.x + "," + f.y + "  " + position.x + "," + position.y + planet.position.x + "," + planet.position.y);
-      stroke(255, 0, 0);
-      line(this.position.x, this.position.y, this.position.x + f.x/2, this.position.y + f.y/10);
+      drawForceVectors();
     }
-    
     popMatrix();
   }
 
@@ -447,6 +588,8 @@ class Planet extends CelestialObject implements Cloneable
   {
     pushMatrix();
     
+    noStroke();
+    
     if (paused && isMouseOver())
       fill(127);
     else
@@ -462,6 +605,8 @@ class Planet extends CelestialObject implements Cloneable
         handleRadius = 2;
         
       ellipse(position.x, position.y, handleRadius*2, handleRadius*2);
+      
+      drawForceVectors();
     }
     
     popMatrix();
@@ -488,19 +633,41 @@ class GravitySimulation
   {
     for (int i = 0; i < objects.size(); i++)
     {
+      CelestialObject obj = (CelestialObject)objects.get(i);
+      ArrayList forces = obj.getForces();
+      float totalForceX = 0;
+      float totalForceY = 0;
+      
+      for (int j = 0; j < forces.size(); j++)
+      {
+        totalForceX += ((PVector)forces.get(j)).x;
+        totalForceY += ((PVector)forces.get(j)).y;
+      }
+      
+      PVector newAccel = new PVector(totalForceX/obj.getMass(), totalForceY/obj.getMass());
+      
+      obj.setAcceleration(newAccel);
+    }
+    
+    for (int i = 0; i < objects.size(); i++)
+    {
       CelestialObject obj1 = (CelestialObject)objects.get(i);
       float forceX = 0;
       float forceY = 0;
-      float totalForceX = 0;
-      float totalForceY = 0;
       obj1.clearForces();
+      
+      if (obj1.getClass() == Star.class)
+      {
+        println(obj1.getVelocity());
+        continue;
+      }
   
       for (int j = 0; j < objects.size(); j++)
       {  
         CelestialObject obj2 = (CelestialObject)objects.get(j);
   
         if (i == j)
-        continue;
+          continue;
   
         PVector pvDistance = PVector.sub(obj2.getPosition(), obj1.getPosition());
         //    println("distance: x:" + pvDistance.x + " y:" + pvDistance.y);
@@ -510,16 +677,27 @@ class GravitySimulation
         float force = (G * obj1.getMass() * obj2.getMass())/sq(distance);
         forceX = force * cos(radians(angle));
         forceY = force * sin(radians(angle));
-        totalForceX += forceX;
-        totalForceY += forceY;
-        
+//        println("FORCES on " + obj1.getName() + ":" + forceX + "," + forceY);
         obj1.addForce(new PVector(forceX, forceY));
+        
+        println();
       }
-  
-      PVector newAccel = new PVector(totalForceX/obj1.getMass(), totalForceY/obj1.getMass());
-  
-      obj1.setAcceleration(newAccel);
     }
+  }
+}
+
+static class Util
+{
+  // Does a deepcopy of an array list
+  public static ArrayList cloneArrayList(ArrayList al)
+  {
+    ArrayList alNew = new ArrayList(al.size());
+    for (int i = 0; i < al.size(); i++)
+    {
+      alNew.add(((CelestialObject)al.get(i)).clone());
+    }
+    
+    return alNew;
   }
 }
 
