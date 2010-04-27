@@ -1,14 +1,29 @@
-import java.util.*;
-import controlP5.*;
+import processing.core.*; 
+import processing.xml.*; 
+
+import java.util.*; 
+import controlP5.*; 
+
+import java.applet.*; 
+import java.awt.Dimension; 
+import java.awt.Frame; 
+import java.awt.event.MouseEvent; 
+import java.awt.event.KeyEvent; 
+import java.awt.event.FocusEvent; 
+import java.awt.Image; 
+import java.io.*; 
+import java.net.*; 
+import java.text.*; 
+import java.util.*; 
+import java.util.zip.*; 
+import java.util.regex.*; 
+
+public class PlanetScape extends PApplet {
+
+
+
 
 ControlP5 controlP5;
-
-PFont font;
-
-BackgroundStars bgStars;
-
-Button btnStar;
-Button btnPlanet;
 
 Timeline timeline;
 GravitySimulation sim;
@@ -26,7 +41,7 @@ boolean dragging;
 
 boolean drawVectors;
 
-void setup()
+public void setup()
 {
   size(1024, 768);
   background(0);
@@ -36,22 +51,14 @@ void setup()
   drawVectors = false;
   
   paused = true;
-  
-  font = loadFont("Verdana-10.vlw"); 
-  textFont(font);
-  
-  bgStars = new BackgroundStars();
-  
-  btnStar = new Button(20, 40, 10, color(255, 193, 37), color(255, 165, 0), "Star");
-  btnPlanet = new Button(20, 70, 10, color(224, 224, 224), color(67, 110, 238), "Planet");
 
   timeline = new Timeline();
 
   sim = new GravitySimulation();
 
-  sun = new Star(10000, 25, new PVector(300, 500), new PVector(0, 0), 0, "sun");
-  planet = new Planet(20, 10, new PVector(400, 500), new PVector(0, 40), "planet");
-  planet2 = new Planet(100, 10, new PVector(190, 500), new PVector(0, -40), "planet2");
+  sun = new Star(5000, 25, new PVector(300, 500), new PVector(0, 0), 0, "sun");
+  planet = new Planet(10, 10, new PVector(500, 500), new PVector(0, 40), "planet");
+  planet2 = new Planet(50, 10, new PVector(150, 500), new PVector(0, -40), "planet2");
   
   timeline.registerStatefulObject(sun);
   timeline.registerStatefulObject(planet);
@@ -72,25 +79,13 @@ void setup()
   sliderTimeline.setLabel("Timeline");
 }
 
-void draw()
+public void draw()
 {
   background(0);
   fill(255);
-  bgStars.draw();
-  drawFPS();
   
   if (!paused)
     timeline.moveForward();
-    
-  if(paused)
-  {
-    btnStar.draw();
-    btnPlanet.draw();
-    
-    fill(50);
-    noStroke();
-    rect(0, 720, width, (786-720));
-  }
   
   if (dragging)
     drawOrbits(timeline.getFutureObjectStates());
@@ -105,21 +100,15 @@ void draw()
   }
 }
 
-void drawFPS()
-{
-  text(frameRate, 20, 20);
-}
-
-//      _                      ____       _     _ _       
-//     | |                    / __ \     | |   (_) |      
-//   __| |_ __ __ ___      __| |  | |_ __| |__  _| |_ ___ 
-//  / _` | '__/ _` \ \ /\ / /| |  | | '__| '_ \| | __/ __|
-// | (_| | | | (_| |\ V  V / | |__| | |  | |_) | | |_\__ \
-//  \__,_|_|  \__,_| \_/\_/   \____/|_|  |_.__/|_|\__|___/
 public void drawOrbits(ArrayList alObjectsArchive)
 {
+//  println("SIZE:" + alObjectsArchive.size());
+//  ArrayList alObjectsArchive = timeline.getObjectStateArchive();
   ArrayList alPrevPos = new ArrayList();
-
+  ArrayList alColors = new ArrayList();
+  alColors.add(color(255, 0, 0));
+  alColors.add(color(255, 255, 0));
+  alColors.add(color(255, 0, 255));
 //  for (int i = timeline.getTimeIdx(); i >= 0 && i > (timeline.getTimeIdx() - 1 - 100); i--)
   for (int i = 0; i < alObjectsArchive.size(); i++)
   {
@@ -127,10 +116,10 @@ public void drawOrbits(ArrayList alObjectsArchive)
     for (int j = 0; j < objects.size(); j++)
     {
       CelestialObject obj = (CelestialObject)objects.get(j);
+//      CelestialObject obj = (CelestialObject)objects.get(1);
       PVector pos = obj.getPosition();
-
-      stroke(obj.getOrbitColor());
-
+//      stroke(0, 0, 255);
+      stroke((Integer)alColors.get(j));
       if (alPrevPos.size() == objects.size())
       {
         PVector prevPos = (PVector)alPrevPos.get(j);
@@ -143,14 +132,7 @@ public void drawOrbits(ArrayList alObjectsArchive)
   }
 }
 
-//  ______                _     _    _                 _ _               
-// |  ____|              | |   | |  | |               | | |              
-// | |__ __   _____ _ __ | |_  | |__| | __ _ _ __   __| | | ___ _ __ ___ 
-// |  __|\ \ / / _ \ '_ \| __| |  __  |/ _` | '_ \ / _` | |/ _ \ '__/ __|
-// | |____\ V /  __/ | | | |_  | |  | | (_| | | | | (_| | |  __/ |  \__ \
-// |______|\_/ \___|_| |_|\__| |_|  |_|\__,_|_| |_|\__,_|_|\___|_|  |___/
-//                                                                       
-//
+// Event Handlers
 public void btnPlayPause_OnClick(int theValue)
 {
   paused = !paused;
@@ -193,32 +175,10 @@ public void mouseDragged()
         pos.x = mouseX;
         pos.y = mouseY;
         
-        println(pos.x + "," + pos.y);
         timeline.reset();
-//        timeline.setCurrentState(objects);
+        timeline.setCurrentState(objects);
+        sliderTimeline.setValue(0);
         break;
-      }
-      
-      if (obj.getClass() == Planet.class)
-      {
-        VelocityVector vec = ((Planet)obj).getVelocityVector();
-        if (vec.isMouseOver())
-        {
-          dragging = true;
-          
-          println("AAAAAAAAAAA!");
-          PVector pos = obj.getPosition();
-          PVector velocity = obj.getVelocity();
-          
-          velocity.x = mouseX - pos.x;
-          velocity.y = mouseY - pos.y;
-          
-          vec.update(pos, velocity);
-          
-          timeline.reset();
-          
-          break;
-        }
       }
     }
   }
@@ -238,147 +198,12 @@ public void mouseClicked()
     CelestialObject obj = (CelestialObject)objects.get(i);
     if (obj.isMouseOver())
     {
-      if (mouseButton == LEFT && keyCode == 0)
-      {
-        println(obj.getName() + " clicked!");
-        break;
-      }
-      else if (mouseButton == RIGHT || (mouseButton == LEFT && keyCode == 17))
-      {
-        timeline.unregisterStatefulObject(obj);
-        timeline.reset();
-        break;
-      }
+      println(obj.getName() + " clicked!");
+      break;
     }
-  }
-  
-  // Check if the click is on the Create Star or Create Planet buttons
-  if (btnStar.isMouseOver())
-  {
-    Star star = new Star(10000, 25, new PVector(300, 500), new PVector(0, 0), 0, "sun" + (timeline.getStarsCount() + 1));
-    timeline.registerStatefulObject(star);
-  }
-  
-  if (btnPlanet.isMouseOver())
-  {
-    Planet planet = new Planet(100, 10, new PVector(150, 500), new PVector(0, -40), "planet" + (timeline.getPlanetsCount() + 1));
-    timeline.registerStatefulObject(planet);
   }
 }
 
-//  ____             _                                    _    _____ _                  
-// |  _ \           | |                                  | |  / ____| |                 
-// | |_) | __ _  ___| | __ __ _ _ __ ___  _   _ _ __   __| | | (___ | |_  __ _ _ __ ___ 
-// |  _ < / _` |/ __| |/ // _` | '__/ _ \| | | | '_ \ / _` |  \___ \| __|/ _` | '__/ __|
-// | |_) | (_| | (__|   <| (_| | | | (_) | |_| | | | | (_| |  ____) | |_| (_| | |  \__ \
-// |____/ \__,_|\___|_|\_\\__, |_|  \___/ \__,_|_| |_|\__,_| |_____/ \__|\__,_|_|  |___/
-//                         __/ |                                                        
-//                        |___/                                                         
-class BackgroundStars
-{
-  int[][] starPoints = new int[400][2];
-  
-  BackgroundStars()
-  {
-    //setting star co-ordinates
-    for(int i=0;i<400;i++)
-    {
-      starPoints[i][0]=int(random(2,1024));
-      starPoints[i][1]=int(random(2,720));
-    }
-  }
-  
-  void draw()
-  {
-    pushMatrix();
-    stroke(200);
-    strokeWeight(1);
-    
-    for(int i = 0; i < 400; i++)
-    {
-      point(starPoints[i][0], starPoints[i][1]);
-    }
-    
-    popMatrix();
-  }
-}
-
-//  ____        _   _               
-// |  _ \      | | | |              
-// | |_) |_   _| |_| |_  ___  _ __  
-// |  _ <| | | | __| __|/ _ \| '_ \ 
-// | |_) | |_| | |_| |_| (_) | | | |
-// |____/ \__,_|\__|\__|\___/|_| |_|
-//                                  
-//
-// Circular buttons used for adding new stars and planets
-class Button
-{
-  int x, y, rad;
-  color c1, c2, currentc;
-  String name;
-  
-  Button(int X, int Y, int radius, color colour, color overcolour, String bname)
-  {
-    x = X;
-    y = Y;
-    rad = radius;
-    c1 = colour;
-    c2 = overcolour;
-    name = bname;
-    currentc = c1;
-  }
-  
-  public void draw()
-  {
-    pushMatrix();
-    pushStyle();
-    
-    if(this.isMouseOver())
-       drawLabel();
-       
-    stroke(100);
-    strokeWeight(2);
-    fill(currentc);
-    
-    ellipse(x, y, rad*2, rad*2);  
-    
-    popStyle();
-    popMatrix();
-  }
-  
-  public void drawLabel()
-  {
-    pushStyle();
-    fill(c1); 
-    text(name, x + rad + rad/2, y + rad/2);  
-    popStyle();
-  }
-  
-  public boolean isMouseOver()
-  {
-    float disX = x - mouseX;
-    float disY = y - mouseY;
-    
-    if(sqrt(sq(disX) + sq(disY)) < rad ) 
-    { 
-      return true;
-    } 
-    else 
-    {
-      return false;
-    }
-  }  
-}
-
-//
-//  _______ _                _ _            
-// |__   __(_)              | (_)           
-//    | |   _ _ __ ___   ___| |_ _ __   ___ 
-//    | |  | | '_ ` _ \ / _ \ | | '_ \ / _ \
-//    | |  | | | | | | |  __/ | | | | |  __/
-//    |_|  |_|_| |_| |_|\___|_|_|_| |_|\___|
-//                                          
 // This class maintains the timeline in which the whole system exists, i.e. it keeps track of the state of the system at each point in
 // time, thus allowing the user to go forward and backward in time
 class Timeline
@@ -387,24 +212,11 @@ class Timeline
   ArrayList alObjectStateArchive;  // the state of the system at all previous points in time
   ArrayList alStatefulObjects;  // the current state of the system 
   
-  int intStarsCount;
-  int intPlanetsCount;
-  
   public Timeline()
   {
     intTimeIdx = -1;
     alObjectStateArchive = new ArrayList();
     alStatefulObjects = new ArrayList();
-  }
-  
-  public int getStarsCount()
-  {
-    return intStarsCount;
-  }
-  
-  public int getPlanetsCount()
-  {
-    return intPlanetsCount;
   }
   
   public ArrayList getStatefulObjects()
@@ -453,31 +265,11 @@ class Timeline
   {
     intTimeIdx = -1;
     alObjectStateArchive.clear();
-    sliderTimeline.setValue(0);
   }
   
   public void registerStatefulObject(CelestialObject obj)
   {
     alStatefulObjects.add(obj);
-    
-    if (obj.getClass() == Star.class)
-      intStarsCount++;
-    else
-      intPlanetsCount++;
-  }
-  
-  public void unregisterStatefulObject(CelestialObject obj)
-  {
-    int idx = alStatefulObjects.indexOf(obj);
-    if (idx != -1)
-    {
-      alStatefulObjects.remove(idx);
-      
-      if (obj.getClass() == Star.class)
-        intStarsCount--;
-      else
-        intPlanetsCount--;
-    }
   }
   
   public int moveForward()
@@ -555,85 +347,6 @@ class Timeline
   }
 }
 
-// __      __   _            _ _       __      __        _              
-// \ \    / /  | |          (_) |      \ \    / /       | |             
-//  \ \  / /___| | ___   ___ _| |_ _   _\ \  / /___  ___| |_  ___  _ __ 
-//   \ \/ // _ \ |/ _ \ / __| | __| | | |\ \/ // _ \/ __| __|/ _ \| '__|
-//    \  /|  __/ | (_) | (__| | |_| |_| | \  /|  __/ (__| |_| (_) | |   
-//     \/  \___|_|\___/ \___|_|\__|\__, |  \/  \___|\___|\__|\___/|_|   
-//                                  __/ |                               
-//                                 |___/                                
-//
-class VelocityVector
-{
-  PVector pos;
-  PVector velocity;
-  
-  public VelocityVector(PVector pos, PVector velocity)
-  {
-    this.pos = pos;
-    this.velocity = velocity;
-  }
-  
-  public void draw()
-  {
-    pushMatrix();
-
-    stroke(255, 0, 0);
-    
-    float newX = pos.x + this.velocity.x;
-    float newY = pos.y + this.velocity.y;
-    
-    line(pos.x, pos.y, newX, newY);
-    
-    pushMatrix();
-    translate(newX, newY);
-    rotate(atan2(this.velocity.y, this.velocity.x) + radians(90));
-    triangle(0, 0, -5, 5, 5, 5);
-    popMatrix();
-    
-    pushStyle();
-    noFill();
-    noStroke();
-    ellipse(newX, newY, 10, 10);
-    popStyle();
-      
-    popMatrix();
-  }
-  
-  public void update(PVector pos, PVector velocity)
-  {
-    this.pos = pos;
-    this.velocity = velocity;
-  }
-  
-  public boolean isMouseOver()
-  {
-    float arrowPosX = this.pos.x + this.velocity.x;
-    float arrowPosY = this.pos.y + this.velocity.y;
-
-    float disX = arrowPosX - mouseX;
-    float disY = arrowPosY - mouseY;
-    
-    if(sqrt(sq(disX) + sq(disY)) < 10) 
-    { 
-      return true;
-    } 
-    else 
-    {
-      return false;
-    }
-  }
-}
-
-//   _____      _          _   _       _  ____  _     _           _   
-//  / ____|    | |        | | (_)     | |/ __ \| |   (_)         | |  
-// | |      ___| | ___ ___| |_ _  __ _| | |  | | |__  _  ___  ___| |_ 
-// | |     / _ \ |/ _ | __| __| |/ _` | | |  | | '_ \| |/ _ \/ __| __|
-// | |____|  __/ |  __|__ \ |_| | (_| | | |__| | |_) | |  __/ (__| |_ 
-//  \_____|\___|_|\___|___/\__|_|\__,_|_|\____/|_.__/| |\___|\___|\__|
-//                                                  _/ |              
-//                                                 |__/               
 abstract class CelestialObject implements Cloneable
 {
   int mass;
@@ -642,7 +355,6 @@ abstract class CelestialObject implements Cloneable
   PVector velocity;
   PVector acceleration;
   String strName;
-  color orbitColor;
   
   ArrayList alForces;
 
@@ -652,17 +364,9 @@ abstract class CelestialObject implements Cloneable
     this.radius = radius;
     this.position = position;
     this.velocity = initialVelocity;
-    this.acceleration = new PVector(0, 0);
     this.strName = strName;
-    this.orbitColor = color(random(255), random(255), random(255));
     
     this.alForces = new ArrayList();
-  }
-  
-  public CelestialObject(int mass, float radius, PVector position, PVector initialVelocity, String strName, color orbitColor)  
-  {
-    this(mass, radius, position, initialVelocity, strName);
-    this.orbitColor = orbitColor;
   }
 
   public CelestialObject(CelestialObject other)
@@ -691,20 +395,11 @@ abstract class CelestialObject implements Cloneable
   {
     return strName;
   }
-  
-  public color getOrbitColor()
-  {
-    return this.orbitColor;
-  }
 
   public void setAcceleration(PVector acceleration)
   {
     this.acceleration = acceleration;
-    
-    PVector vel = this.getVelocity();
-    vel.add(new PVector(acceleration.x/6, acceleration.y/6));
-    
-    this.setVelocity(vel);
+    velocity.add(acceleration);
     position.add(velocity);
   }
 
@@ -726,12 +421,6 @@ abstract class CelestialObject implements Cloneable
   public float getRadius()
   {
     return this.radius;
-  }
-  
-  // Only called when the velocity vector is manipulated
-  public void setVelocity(PVector vel)
-  {
-    this.velocity = vel;
   }
   
   public PVector getVelocity()
@@ -856,12 +545,6 @@ abstract class CelestialObject implements Cloneable
   }
 }
 
-//   _____ _              
-//  / ____| |             
-// | (___ | |_  __ _ _ __ 
-//  \___ \| __|/ _` | '__|
-//  ____) | |_| (_| | |   
-// |_____/ \__|\__,_|_|   
 class Star extends CelestialObject implements Cloneable
 {
   int heat;
@@ -914,34 +597,15 @@ class Star extends CelestialObject implements Cloneable
   }
 }
 
-//  _____  _                  _   
-// |  __ \| |                | |  
-// | |__) | | __ _ _ __   ___| |_ 
-// |  ___/| |/ _` | '_ \ / _ \ __|
-// | |    | | (_| | | | |  __/ |_ 
-// |_|    |_|\__,_|_| |_|\___|\__|
 class Planet extends CelestialObject implements Cloneable
 {
   int density = 10;
-  VelocityVector velocityVector;
 
   public Planet(int mass, float radius, PVector position, PVector initialVelocity, String strName)
   {
     super(mass, radius, position, initialVelocity, strName);
-    velocityVector = new VelocityVector(this.position, this.velocity);
   }
-  
-  public VelocityVector getVelocityVector()
-  {
-    return this.velocityVector;
-  }
-  
-  public void setVelocity(PVector vel)
-  {
-    super.setVelocity(vel);
-    this.velocityVector.update(position, vel);
-  }
-  
+
   public void display()
   {
     pushMatrix();
@@ -964,9 +628,7 @@ class Planet extends CelestialObject implements Cloneable
         
       ellipse(position.x, position.y, handleRadius*2, handleRadius*2);
       
-      this.velocityVector.draw();
-      
-//      drawForceVectors();
+      drawForceVectors();
     }
     
     popMatrix();
@@ -975,31 +637,21 @@ class Planet extends CelestialObject implements Cloneable
   public Planet clone()
   {
     Planet obj = (Planet) super.clone();
-    obj.velocityVector = new VelocityVector(obj.position, obj.velocity);
     return obj;
   }
 }
 
-//   _____                 _ _          _____ _                 _       _   _             
-//  / ____|               (_) |        / ____(_)               | |     | | (_)            
-// | |  __ _ __ __ ___   ___| |_ _   _| (___  _ _ __ ___  _   _| | __ _| |_ _  ___  _ __  
-// | | |_ | '__/ _` \ \ / / | __| | | |\___ \| | '_ ` _ \| | | | |/ _` | __| |/ _ \| '_ \ 
-// | |__| | | | (_| |\ V /| | |_| |_| |____) | | | | | | | |_| | | (_| | |_| | (_) | | | |
-//  \_____|_|  \__,_| \_/ |_|\__|\__, |_____/|_|_| |_| |_|\__,_|_|\__,_|\__|_|\___/|_| |_|
-//                                __/ |                                                   
-//                               |___/                                                    
 class GravitySimulation
 {
   //  double G = 6.67482e-11;
-  float G = 6.67482e1;
-//  float G = 16.67;
+  float G = 6.67482e1f;  
 
   public GravitySimulation()
   {
     
   }
 
-  void calculateForces(ArrayList objects)
+  public void calculateForces(ArrayList objects)
   {
     for (int i = 0; i < objects.size(); i++)
     {
@@ -1026,10 +678,9 @@ class GravitySimulation
       float forceY = 0;
       obj1.clearForces();
       
-      // We are assuming Stars are stationary, so don't calculate forces acting ON stars
       if (obj1.getClass() == Star.class)
       {
-//        println(obj1.getVelocity());
+        println(obj1.getVelocity());
         continue;
       }
   
@@ -1050,17 +701,13 @@ class GravitySimulation
         forceY = force * sin(radians(angle));
 //        println("FORCES on " + obj1.getName() + ":" + forceX + "," + forceY);
         obj1.addForce(new PVector(forceX, forceY));
+        
+        println();
       }
     }
   }
 }
 
-//  _    _ _   _ _ 
-// | |  | | | (_) |
-// | |  | | |_ _| |
-// | |  | | __| | |
-// | |__| | |_| | |
-//  \____/ \__|_|_|
 static class Util
 {
   // Does a deepcopy of an array list
@@ -1077,3 +724,8 @@ static class Util
 }
 
 
+
+  static public void main(String args[]) {
+    PApplet.main(new String[] { "--bgcolor=#FFFFFF", "PlanetScape" });
+  }
+}
