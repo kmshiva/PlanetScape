@@ -23,6 +23,7 @@ controlP5.Slider sliderTimeline;
 
 boolean paused;
 boolean dragging;
+boolean rightClick;
 
 boolean drawVectors;
 
@@ -173,7 +174,8 @@ public void btnRewind_OnClick(int theValue)
 
 public void sliderTimeline_OnClick(int theValue)
 {
-  if(!dragging)
+  println(theValue + "-" + timeline.getTimeIdx());
+  if(!dragging && !rightClick)
     timeline.move(theValue - timeline.getTimeIdx());
 }
 
@@ -193,7 +195,7 @@ public void mouseDragged()
         pos.x = mouseX;
         pos.y = mouseY;
         
-        println(pos.x + "," + pos.y);
+//        println(pos.x + "," + pos.y);
         timeline.reset();
 //        timeline.setCurrentState(objects);
         break;
@@ -206,7 +208,6 @@ public void mouseDragged()
         {
           dragging = true;
           
-          println("AAAAAAAAAAA!");
           PVector pos = obj.getPosition();
           PVector velocity = obj.getVelocity();
           
@@ -238,15 +239,12 @@ public void mouseClicked()
     CelestialObject obj = (CelestialObject)objects.get(i);
     if (obj.isMouseOver())
     {
-      if (mouseButton == LEFT && keyCode == 0)
+      if (mouseButton == RIGHT || (mouseButton == LEFT && keyPressed && keyCode == 17))
       {
-        println(obj.getName() + " clicked!");
-        break;
-      }
-      else if (mouseButton == RIGHT || (mouseButton == LEFT && keyCode == 17))
-      {
+        rightClick = true;
         timeline.unregisterStatefulObject(obj);
         timeline.reset();
+        rightClick = false;
         break;
       }
     }
@@ -265,6 +263,7 @@ public void mouseClicked()
     timeline.registerStatefulObject(planet);
   }
 }
+
 
 //  ____             _                                    _    _____ _                  
 // |  _ \           | |                                  | |  / ____| |                 
@@ -482,7 +481,7 @@ class Timeline
   
   public int moveForward()
   {
-//    println("forward!");
+    println("forward!");
     intTimeIdx++;
     
     // if the future values have already been calculated, just fetch them instead of calculating them again
